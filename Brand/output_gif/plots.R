@@ -3,6 +3,7 @@ library(mcclust)
 library(mcclust.ext)
 library(fda)
 library(MCMCpack)
+library(patchwork)
 set.seed(12345)
 
 # Rcpp::sourceCpp("code/functional_extension_code/OfficialVersion/01_SLICE_functional_TRAIN_STOCHASTIC_v2.cpp")
@@ -82,7 +83,10 @@ matplot(sigma.train[,3],type="l")
 matplot(sigma.train0[,3],type="l",add=T)
 
 
-
+X <- cbind(X,
+           cos(x)-2+rnorm(t,0,.25),
+           cos(x-2.5)-2+rnorm(t,0,.25))
+matplot(X,type="l")
 
 prior <- list(
   basis       = basis_evaluated,
@@ -195,15 +199,21 @@ matplot(avg.Fte2+3*avg.Ste2,type="l",add=T)
 dim(X)
 dim(Y)
 table(mX$Var1)
+matplot(X,type="l")
+
+matplot(-cos(x)+rnorm(t,0,.25), add=T,type="l")
+
 
 mX <- reshape2::melt(X)
 mY <- reshape2::melt(Y)
 
-mX <- cbind(mX, c=rep(1:3,c(1000,2000,3000)) )
+mX <- cbind(mX, c=c(rep(1:3,c(1000,2000,3000)),rep(1,100),rep(2,100) ))
 mY <- cbind(mY, c=rep(1:5,rep(2000,5)) )
+
 
 nrow(mY)
 nrow(mX)
+matplot(X,type="l")
 
 
 py <- ggplot(mY)+geom_line(aes(x=Var1,y=value,col=factor(c),group=Var2))+theme_bw()
@@ -226,47 +236,103 @@ Tr4 <- cbind(a=Tr2,b=Tr3)
 minX <- min(mX)
 maxX <- max(mX)
 px0 <- ggplot(mX)+geom_line(aes(x=Var1,y=value,
-  col=factor(c),group=Var2),alpha=.5,lwd=1)+theme_bw()+
+  col=factor(c),group=Var2),alpha=.5,lwd=.75)+theme_bw()+
   xlab("x")+ylab("y")+theme(legend.position="none")+
-  xlim(minX,maxX)
+  ggtitle("Training Set")+#ylim(-3.5,1.5)+
+  scale_color_manual(values=c(1:3))+
+  scale_y_continuous(breaks=c(-3:3))
 px0
 
 
-px1 <- ggplot()+geom_line(data=Tr1,
+px0Y <- ggplot(mY)+geom_line(aes(x=Var1,y=value,
+                                col=factor(c),group=Var2),alpha=.25,lwd=.75)+theme_bw()+
+  xlab("x")+ylab("y")+theme(legend.position="none")+ggtitle("Training Set - Data")+
+  scale_y_continuous(breaks=c(-3:3))+
+  scale_color_manual(values=rep("royalblue",5))+ggtitle("Test Set")#+ylim(-3.2,1.5)
+px0Y
+
+px0+px0Y
+
+ggsave("output_gif/TestAndTraining.png",width = 14,height = 7)
+ggsave("output_gif/TestAndTraining.pdf",width = 14,height = 7)
+
+
+px1a <- ggplot(mX)+geom_line(aes(x=Var1,y=value,
+                                col=factor(c),group=Var2),alpha=.5,lwd=.75)+theme_bw()+
+  xlab("x")+ylab("y")+theme(legend.position="none")+
+  scale_y_continuous(breaks=c(-3:3))+
+  ggtitle("Training Set")+#ylim(-1.5,1.5)+
+  scale_color_manual(values=c(1:3))
+px1a
+
+px1b <- ggplot()+geom_line(data=Tr1,
   aes(x=Var1, y=value, group=Var2,col=factor(Var2)))+theme_bw()+
+  scale_y_continuous(breaks=c(-3:3))+
   geom_ribbon(data=Tr4,aes(x=a.Var1,ymin=a.value,ymax=b.value,group=a.Var2,fill=a.Var2),alpha=.3)+geom_line(data=Tr1,
     aes(x=Var1, y=value, group=Var2,col=factor(Var2)),lwd=1.2)+
-xlab("x")+ylab("y")+theme(legend.position="none")+
-  xlim(minX,maxX)
-
-library(patchwork)
-px0+px1
-
-
-
-
-
-ggplot()+geom_line(data=mX,aes(x=Var1,y=value,
-  col=factor(c),group=Var2),alpha=.1,lwd=1)+
-
-  geom_line(data=Tr1,
-  aes(x=Var1, y=value, group=Var2,col=factor(Var2)))+theme_bw()+
-  geom_ribbon(data=Tr4,aes(x=a.Var1,ymin=a.value,ymax=b.value,group=a.Var2,fill=a.Var2),alpha=.5)+geom_line(data=Tr1,
-    aes(x=Var1, y=value, group=Var2,col=factor(Var2)),lwd=1.2)+
   xlab("x")+ylab("y")+theme(legend.position="none")+
-  xlim(minX,maxX)
+  scale_color_manual(values=c(1:3))+
+  scale_fill_manual(values=c(1:3))+
+  ggtitle("Training Set - Robust Mean and Standard Deviation")#+ylim(-4,1.5)
+
+px1c <- ggplot()+theme_void()+  scale_y_continuous(breaks=c(-3:3))
+
+
+px1a+px1c
+ggsave("output_gif/OnlyTrain.png",width = 14,height = 7)
+ggsave("output_gif/OnlyTrain.pdf",width = 14,height = 7)
+
+px1a+px1b
+
+ggsave("output_gif/TrainExtract.png",width = 14,height = 7)
+ggsave("output_gif/TrainExtract.pdf",width = 14,height = 7)
+
+
+
+v <- apply(RES$AB[,2,]==0,1,function(x) mean(x==0))
+mY2  <- cbind(mY,b=rep(v,rep(100,100)))
+px1Y <- ggplot(mY2)+geom_line(aes(x=Var1,y=value,
+                                 col=factor(c),group=Var2),alpha=.25,lwd=.75)+theme_bw()+
+  scale_y_continuous(breaks=c(-3:3))+
+  scale_color_manual(values=rep("royalblue",5))+ggtitle("Test Set")+
+  xlab("x")+ylab("y")+theme(legend.position="none")+ggtitle("Training Set - Data")+
+  geom_line(aes(x=Var1,y=value,
+                group=Var2),col=(ifelse(mY2$b==0,"darkblue","yellow")),alpha=1,lwd=.75)+
+  gganimate::transition_layers(from_blank = F)+gganimate::enter_fade()
+  #+ylim(-3.2,1.5)
+px1Y
+Y
+
+  scale_color_manual(values=c("darkblue","yellow"))+ggtitle("Test Set")
+
+# ggplot()+geom_line(data=mX,aes(x=Var1,y=value,
+#   col=factor(c),group=Var2),alpha=.1,lwd=1)+
+#
+#   geom_line(data=Tr1,
+#   aes(x=Var1, y=value, group=Var2,col=factor(Var2)))+theme_bw()+
+#   geom_ribbon(data=Tr4,aes(x=a.Var1,ymin=a.value,ymax=b.value,group=a.Var2,fill=a.Var2),alpha=.5)+geom_line(data=Tr1,
+#     aes(x=Var1, y=value, group=Var2,col=factor(Var2)),lwd=1.2)+
+#   xlab("x")+ylab("y")+theme(legend.position="none")+
+#   xlim(minX,maxX)
+#
+
+
+
+
+#
+# matplot(avg.Fte1,type="l",add=T)
+# matplot(avg.Fte2,type="l",add=T)
+# matplot(avg.Fte1-3*avg.Ste1,type="l",add=T)
+# matplot(avg.Fte2-3*avg.Ste2,type="l",add=T)
+# matplot(avg.Fte1+3*avg.Ste1,type="l",add=T)
+# matplot(avg.Fte2+3*avg.Ste2,type="l",add=T)
+#
 
 
 
 
 
 
-matplot(avg.Fte1,type="l",add=T)
-matplot(avg.Fte2,type="l",add=T)
-matplot(avg.Fte1-3*avg.Ste1,type="l",add=T)
-matplot(avg.Fte2-3*avg.Ste2,type="l",add=T)
-matplot(avg.Fte1+3*avg.Ste1,type="l",add=T)
-matplot(avg.Fte2+3*avg.Ste2,type="l",add=T)
 
 
 
@@ -279,46 +345,39 @@ matplot(avg.Fte2+3*avg.Ste2,type="l",add=T)
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# -------------------------------------------------------------------------
-
-y1 <- mvtnorm::rmvnorm(500,c(4,4),sigma = matrix(c(1,.75,.75,1),2,2))
-y2 <- mvtnorm::rmvnorm(500,c(0,0),sigma = matrix(c(1,-.75,-.75,1),2,2))
-y3 <- mvtnorm::rmvnorm(500,c(-4,4),sigma = matrix(c(1,0,0,1),2,2))
-x1 <- mvtnorm::rmvnorm(500,c(4,4),sigma = matrix(c(1,.75,.75,1),2,2))
-x2 <- mvtnorm::rmvnorm(500,c(0,0),sigma = matrix(c(1,-.75,-.75,1),2,2))
-x4 <- mvtnorm::rmvnorm(500,c(-4,4),sigma = matrix(c(1,0,0,1),2,2))
-x4 <- mvtnorm::rmvnorm(500,c(-4,-4),sigma = matrix(c(1,0,0,1),2,2))
-x5 <- mvtnorm::rmvnorm(500,c(4,-4),sigma = matrix(c(1,.5,.5,1),2,2))
-
-lab <- rep(1:8,rep(500,8))
-l2  <- rep(1:2,c(1500,2500))
-
-X <- as_tibble(cbind(rbind(y1,y2,y3,x1,x2,x3,x4,x5),lab,l2))
-X <- X %>% mutate(l2=ifelse(l2==1,"Training set","Test set"))
-X <- X %>% mutate(l2=factor(l2,levels = c("Training set","Test set")))
-
-
-ggplot(data = X)+theme_bw()+xlab("x")+ylab("y")+
-  geom_point(aes(x=V1,y=V2))+facet_wrap(~factor(l2)+
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+# # -------------------------------------------------------------------------
+#
+# y1 <- mvtnorm::rmvnorm(500,c(4,4),sigma = matrix(c(1,.75,.75,1),2,2))
+# y2 <- mvtnorm::rmvnorm(500,c(0,0),sigma = matrix(c(1,-.75,-.75,1),2,2))
+# y3 <- mvtnorm::rmvnorm(500,c(-4,4),sigma = matrix(c(1,0,0,1),2,2))
+# x1 <- mvtnorm::rmvnorm(500,c(4,4),sigma = matrix(c(1,.75,.75,1),2,2))
+# x2 <- mvtnorm::rmvnorm(500,c(0,0),sigma = matrix(c(1,-.75,-.75,1),2,2))
+# x4 <- mvtnorm::rmvnorm(500,c(-4,4),sigma = matrix(c(1,0,0,1),2,2))
+# x4 <- mvtnorm::rmvnorm(500,c(-4,-4),sigma = matrix(c(1,0,0,1),2,2))
+# x5 <- mvtnorm::rmvnorm(500,c(4,-4),sigma = matrix(c(1,.5,.5,1),2,2))
+#
+# lab <- rep(1:8,rep(500,8))
+# l2  <- rep(1:2,c(1500,2500))
+#
+# X <- as_tibble(cbind(rbind(y1,y2,y3,x1,x2,x3,x4,x5),lab,l2))
+# X <- X %>% mutate(l2=ifelse(l2==1,"Training set","Test set"))
+# X <- X %>% mutate(l2=factor(l2,levels = c("Training set","Test set")))
+#
+#
+# ggplot(data = X)+theme_bw()+xlab("x")+ylab("y")+
+#   geom_point(aes(x=V1,y=V2))+facet_wrap(~factor(l2)+
 
 
