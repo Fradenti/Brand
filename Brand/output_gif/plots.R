@@ -297,8 +297,8 @@ px1Y <- ggplot(mY2)+geom_line(aes(x=Var1,y=value,
   scale_color_manual(values=rep("royalblue",5))+ggtitle("Test Set")+
   xlab("x")+ylab("y")+theme(legend.position="none")+ggtitle("Training Set - Data")+
   geom_line(aes(x=Var1,y=value,
-                group=Var2),col=(ifelse(mY2$b==0,"darkblue","yellow")),alpha=1,lwd=.75)+
-  gganimate::transition_layers(from_blank = F)+gganimate::enter_fade()
+                group=Var2),col=(ifelse(mY2$b==0,"darkblue","orange")),alpha=.8,lwd=.75)+
+  gganimate::transition_layers(from_blank = F)+gganimate::enter_fade()+gganimate::exit_fade()
   #+ylim(-3.2,1.5)
 px1Y
 Y
