@@ -216,7 +216,6 @@ px
 
 
 
-ggplot()
 
 Tr1 <- reshape2::melt(RES$FTr0)
 Tr2 <- reshape2::melt(RES$FTr0+3*RES$STr0)
@@ -269,5 +268,57 @@ matplot(avg.Fte2-3*avg.Ste2,type="l",add=T)
 matplot(avg.Fte1+3*avg.Ste1,type="l",add=T)
 matplot(avg.Fte2+3*avg.Ste2,type="l",add=T)
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# -------------------------------------------------------------------------
+
+y1 <- mvtnorm::rmvnorm(500,c(4,4),sigma = matrix(c(1,.75,.75,1),2,2))
+y2 <- mvtnorm::rmvnorm(500,c(0,0),sigma = matrix(c(1,-.75,-.75,1),2,2))
+y3 <- mvtnorm::rmvnorm(500,c(-4,4),sigma = matrix(c(1,0,0,1),2,2))
+x1 <- mvtnorm::rmvnorm(500,c(4,4),sigma = matrix(c(1,.75,.75,1),2,2))
+x2 <- mvtnorm::rmvnorm(500,c(0,0),sigma = matrix(c(1,-.75,-.75,1),2,2))
+x4 <- mvtnorm::rmvnorm(500,c(-4,4),sigma = matrix(c(1,0,0,1),2,2))
+x4 <- mvtnorm::rmvnorm(500,c(-4,-4),sigma = matrix(c(1,0,0,1),2,2))
+x5 <- mvtnorm::rmvnorm(500,c(4,-4),sigma = matrix(c(1,.5,.5,1),2,2))
+
+lab <- rep(1:8,rep(500,8))
+l2  <- rep(1:2,c(1500,2500))
+
+X <- as_tibble(cbind(rbind(y1,y2,y3,x1,x2,x3,x4,x5),lab,l2))
+X <- X %>% mutate(l2=ifelse(l2==1,"Training set","Test set"))
+X <- X %>% mutate(l2=factor(l2,levels = c("Training set","Test set")))
+
+
+ggplot(data = X)+theme_bw()+xlab("x")+ylab("y")+
+  geom_point(aes(x=V1,y=V2))+facet_wrap(~factor(l2)+
 
 
