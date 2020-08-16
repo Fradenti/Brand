@@ -4,6 +4,7 @@ library(mcclust.ext)
 library(fda)
 library(MCMCpack)
 library(patchwork)
+library(gganimate)
 set.seed(12345)
 
 # Rcpp::sourceCpp("code/functional_extension_code/OfficialVersion/01_SLICE_functional_TRAIN_STOCHASTIC_v2.cpp")
@@ -125,8 +126,8 @@ major.vote <- function(x){
 
 CL <- apply(RES$AB[,1,],1,major.vote)
 
-matplot(apply(RES$FTr,c(1,2),mean),type="l",lty=2)
-matplot(RES$FTr0[,1:3],type="l",add=T)
+# matplot(apply(RES$FTr,c(1,2),mean),type="l",lty=2)
+# matplot(RES$FTr0[,1:3],type="l",add=T)
 
 matplot(apply(RES$STr,c(1,2),mean),type="l",lty=2)
 matplot(RES$STr0[,1:3],type="l",add=T)
@@ -226,6 +227,7 @@ px
 
 
 
+# gettin serious ----------------------------------------------------------
 
 Tr1 <- reshape2::melt(RES$FTr0)
 Tr2 <- reshape2::melt(RES$FTr0+3*RES$STr0)
@@ -236,7 +238,7 @@ Tr4 <- cbind(a=Tr2,b=Tr3)
 minX <- min(mX)
 maxX <- max(mX)
 px0 <- ggplot(mX)+geom_line(aes(x=Var1,y=value,
-  col=factor(c),group=Var2),alpha=.5,lwd=.75)+theme_bw()+
+  col=factor(c),group=Var2),alpha=.25,lwd=.75)+theme_bw()+
   xlab("x")+ylab("y")+theme(legend.position="none")+
   ggtitle("Training Set")+#ylim(-3.5,1.5)+
   scale_color_manual(values=c(1:3))+
@@ -253,8 +255,8 @@ px0Y
 
 px0+px0Y
 px0/px0Y
-ggsave("/Users/frali/Documents/GitHub/Brand-package/Brand/output_gif/TestAndTraining.png",width = 8,height = 6)
-ggsave("/Users/frali/Documents/GitHub/Brand-package/Brand/output_gif/TestAndTraining.pdf",width = 8,height = 6)
+ggsave("TestAndTraining.png",width = 8,height = 6)
+ggsave("TestAndTraining.pdf",width = 8,height = 6)
 
 
 px1a <- ggplot(mX)+geom_line(aes(x=Var1,y=value,
@@ -267,24 +269,24 @@ px1a
 
 px1b <- ggplot()+geom_line(data=Tr1,
   aes(x=Var1, y=value, group=Var2,col=factor(Var2)))+theme_bw()+
-  scale_y_continuous(breaks=c(-3:3))+
+  scale_y_continuous(breaks=c(-3:3))+ylim(-3,1.8)+
   geom_ribbon(data=Tr4,aes(x=a.Var1,ymin=a.value,ymax=b.value,group=a.Var2,fill=a.Var2),alpha=.3)+geom_line(data=Tr1,
     aes(x=Var1, y=value, group=Var2,col=factor(Var2)),lwd=1.2)+
   xlab("x")+ylab("y")+theme(legend.position="none")+
   scale_color_manual(values=c(1:3))+
-  scale_fill_manual(values=c(1:3))+
+  scale_fill_manual(values=c(1:3))+#ylim(-3.2,1.8)+
   ggtitle("Training Set - Robust Mean and Standard Deviation")#+ylim(-4,1.5)
 
 px1c <- ggplot()+theme_void()+  scale_y_continuous(breaks=c(-3:3))
 
 
 px1a/px1c
-ggsave("/Users/frali/Documents/GitHub/Brand-package/Brand/output_gif/OnlyTrain.png",width = 8,height = 6)
-ggsave("/Users/frali/Documents/GitHub/Brand-package/Brand/output_gif/OnlyTrain.pdf",width = 8,height = 6)
+ggsave("OnlyTrain.png",width = 8,height = 6)
+ggsave("OnlyTrain.pdf",width = 8,height = 6)
 
 (px1a)/px1b
-ggsave("/Users/frali/Documents/GitHub/Brand-package/Brand/output_gif/TrainExtract.png",width = 8,height = 6)
-ggsave("/Users/frali/Documents/GitHub/Brand-package/Brand/output_gif/TrainExtract.pdf",width = 8,height = 6)
+ggsave("output_gif/TrainExtract.png",width = 8,height = 6)
+ggsave("output_gif/TrainExtract.pdf",width = 8,height = 6)
 
 
 v <- apply(RES$AB[,2,]==0,1,function(x) mean(x==0))
@@ -317,14 +319,18 @@ px2Y <- ggplot(mY2)+geom_line(aes(x=Var1,y=value,
   geom_line(aes(x=Var1,y=value,
     group=Var2),col=(ifelse(mY2$b==0,"transparent","red")),alpha=(ifelse(mY2$b==0,0,.25)),lwd=.75)+
   geom_line(aes(x=Var1,y=value,
-    group=Var2),col=(ifelse(mY2$c==4,"orange",ifelse(mY2$c==5,"green","transparent"))),alpha=(ifelse(mY2$b==0,0,.25)),lwd=.75)+
-  gganimate::transition_layers(from_blank = F,keep_layers = c(Inf,0,0,0,Inf),layer_length = 2)+gganimate::enter_fade()+gganimate::exit_fade()
-#+ylim(-3.2,1.5)
+    group=Var2),col=(ifelse(mY2$c==4,"darkorange",ifelse(mY2$c==5,"purple","transparent"))),alpha=(ifelse(mY2$b==0,0,.25)),lwd=.75)+
+  gganimate::transition_layers(from_blank = F,
+                               keep_layers = c(Inf,0,0,0,Inf),
+                               layer_length = 20,
+                               transition_length = 5)+
+  gganimate::enter_fade()+gganimate::exit_fade()
+
 px2Y
-gganimate::anim_save(animation = px2Y,filename = "/Users/frali/Documents/GitHub/Brand-package/Brand/output_gif/TestProb2.gif")
+gganimate::anim_save(animation = px2Y,filename = "TestProb2.gif")
 
 
-plot(3,col="darkorange")
+  plot(3,col="darkorange")
 # ggplot()+geom_line(data=mX,aes(x=Var1,y=value,
 #   col=factor(c),group=Var2),alpha=.1,lwd=1)+
 #
