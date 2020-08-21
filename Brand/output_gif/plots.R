@@ -310,8 +310,8 @@ px2Y <- ggplot(mY2)+geom_line(aes(x=Var1,y=value,
   col=factor(c),group=Var2),alpha=0,lwd=.75)+theme_bw()+
   scale_y_continuous(breaks=c(-3:3))+
   scale_color_manual(values=rep("transparent",5))+
-  ggtitle("Test Set")+
-  xlab("x")+ylab("y")+theme(legend.position="none")+ggtitle("Training Set - Data")+
+  #ggtitle("Test Set")+
+  xlab("x")+ylab("y")+theme(legend.position="none")+#ggtitle("Training Set - Data")+
   geom_line(aes(x=Var1,y=value,
     group=Var2),col="royalblue",alpha=.25,lwd=.75)+
   geom_line(aes(x=Var1,y=value,
@@ -327,10 +327,10 @@ px2Y <- ggplot(mY2)+geom_line(aes(x=Var1,y=value,
   gganimate::enter_fade()+gganimate::exit_fade()
 
 px2Y
-gganimate::anim_save(animation = px2Y,filename = "TestProb2.gif")
+gganimate::anim_save(animation = px2Y,filename = "TestProb3.gif")
 
 
-  plot(3,col="darkorange")
+  `plot(3,col="darkorange")
 # ggplot()+geom_line(data=mX,aes(x=Var1,y=value,
 #   col=factor(c),group=Var2),alpha=.1,lwd=1)+
 #
