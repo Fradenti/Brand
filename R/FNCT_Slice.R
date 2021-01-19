@@ -1,17 +1,10 @@
-library(LaplacesDemon)
-library(MCMCpack)
-
-major.vote <- function(x){
-  as.numeric(names(sort(table(x),decreasing = TRUE))[1]) 
-}
-
 
 Update.pi <- function(alphabeta,aDir,G){
   alpha        <- alphabeta[,1]
   ns           <- table(factor(alpha,levels = 0:G))
   nj           <- c(ns[-1],ns[1])
   aDirtilde    <- nj+aDir
-  return(rdirichlet(1,aDirtilde))
+  return(MCMCpack::rdirichlet(1,aDirtilde))
 }
 
 a.AND.b_sigmaT_train <- function(sigma.est.train, # matrix TxG
@@ -19,7 +12,7 @@ a.AND.b_sigmaT_train <- function(sigma.est.train, # matrix TxG
   ab      <- array(NA,c(t,G,2))
   ab[,,1] <- 2 + (sigma.est.train)^2/vg
   ab[,,2] <- ((sigma.est.train)^2/vg+1)*sigma.est.train
-  
+
   return(ab)
 }
 
@@ -27,7 +20,7 @@ a.AND.b_sigmaT_train <- function(sigma.est.train, # matrix TxG
 
 log_pitilde.maker <- function(pi, omega, G) {
   return(c(log(pi[-(G + 1)]), log(pi[G + 1]) + log(omega)))
-  
+
 }
 
 alphaneta_to_zeta <- function(AB,n,G){
@@ -39,15 +32,15 @@ alphaneta_to_zeta <- function(AB,n,G){
 zeta_to_alphabeta <- function(Z,n,G){
   AB   <- matrix(0,n,2)
   ind1 <- which(Z<=G)
-  
-  if(length(ind1)==0){  
+
+  if(length(ind1)==0){
     AB[,2] <- Z - G
   }else{
     AB[ind1,1]  <- Z[ind1]
     AB[-ind1,2] <- Z[-ind1] - G
   }
-  
-  
+
+
   return(AB)
 }
 
@@ -63,20 +56,20 @@ extract_robust_tr_v2 <-
     basis_coef_matrix <- t(smooth_representation$fd$coefs)
     robust_procedure <- rrcov::CovMrcd(x = basis_coef_matrix, alpha = h_MCD)
     # regularized version, suitable for high dimensional data
-    
+
     effe.train    <- basis_evaluated%*%robust_procedure$center
-    
+
     dif <- apply(single_func_set[,robust_procedure$best],2,function(x)  x - effe.train)
-    
+
     sigma2 <- apply(dif, 1, function(k)
       sum(k ^ 2) / (length(k) - 1))
-    
-    
-    
+
+
+
     list(center=effe.train,sigma2=sigma2,basis=robust_procedure$center)
   }, vectorize.args = "single_func_set")
 
-
+#' @export
 Brand_fct <- function(Y,
                                prior,
                                L,
@@ -88,7 +81,7 @@ Brand_fct <- function(Y,
                                kappa = .5,
                                verbose = 1,
                                learning_type = c("transductive", "inductive")) {
-  
+
   #####################################################################
   ############
   basis       <- prior$basis
@@ -96,7 +89,7 @@ Brand_fct <- function(Y,
   sigma.train0<- prior$sigma.train # now this is a matrix of functions
   effe.train0 <- basis%*%beta.train
   vg          <- prior$vg
-  KappaG      <- prior$KappaG   
+  KappaG      <- prior$KappaG
   n           <- ncol(Y)
   t           <- nrow(Y)
   G           <- ncol(beta.train)
@@ -130,19 +123,19 @@ Brand_fct <- function(Y,
   ### Hyperparameters
   aDir     <- prior$aDir
   aDP      <- prior$aDP
-  a_H      <- prior$a_H  # prior varianza gruppi nuovi 
-  b_H      <- prior$b_H      
+  a_H      <- prior$a_H  # prior varianza gruppi nuovi
+  b_H      <- prior$b_H
   a_tau    <- prior$a_tau  # varianza dei betini
   b_tau    <- prior$b_tau  # varianza dei betini
   a_alpha  <- prior$a_alphaDP
   b_alpha  <- prior$b_alphaDP
   s_tau    <- prior$s_tau
   # inizialization
-  pidir         <- c(rdirichlet(1,aDir))
-  alphabeta     <- matrix(NA,n,2)   
+  pidir         <- c(MCMCpack::rdirichlet(1,aDir))
+  alphabeta     <- matrix(NA,n,2)
   alphabeta[,1] <- sample(0:G,n,replace = T)
   alphabeta[,2] <- ifelse(alphabeta[,1]>0,0,sample(L))
-  u             <- rbeta(n = L, shape1 = 1, shape2 = aDP)
+  u             <- stats::rbeta(n = L, shape1 = 1, shape2 = aDP)
   omega         <- StickBreaker_cpp(V = u)
   effe.test     <- matrix(NA,t,L)
   sigma.test    <- matrix(NA,t,L)
@@ -150,34 +143,34 @@ Brand_fct <- function(Y,
   sigma.train   <- sigma.train0 #matrix(NA,t,G)
   tau           <- numeric(L)
   ak            <- numeric(L)
-  for(k in 1:L){ 
-    sigma.test[,k] <- rinvgamma(t,a_H,b_H)
-    tau[k]         <- rinvgamma(1,a_tau,b_tau)
-    ak[k]          <- rnorm(1,0,sqrt(s_tau))
-    effe.test[,k]  <- rnorm(t,0,sd=sqrt(tau[k]*R))
+  for(k in 1:L){
+    sigma.test[,k] <- MCMCpack::rinvgamma(t,a_H,b_H)
+    tau[k]         <- MCMCpack::rinvgamma(1,a_tau,b_tau)
+    ak[k]          <- stats::rnorm(1,0,sqrt(s_tau))
+    effe.test[,k]  <- stats::rnorm(t,0,sd=sqrt(tau[k]*R))
   }
   ZETA <- alphaneta_to_zeta(alphabeta,n = n,G = G)
   #####################################################################################
-  g2 <- function(j,G) ifelse(j<=G, (1-kappa)/(G+1), 
+  g2 <- function(j,G) ifelse(j<=G, (1-kappa)/(G+1),
                              (1-kappa)/(G+1) *
                                (((G+1)*kappa)/(G*kappa+1)) ^ (j-G-1)  )
   #####################################################################################
   if (verbose) {
     cat("MCMC progress:\n")
-    flush.console()
-    pbar <- txtProgressBar(min = 1,
+    utils::flush.console()
+    pbar <- utils::txtProgressBar(min = 1,
                            max = nsim*thinning + burn_in,
                            style = 3)
     on.exit(close(pbar))
     ipbar <- 0
   }
-  
+
   for(sim in 1:(nsim*thinning + burn_in)){
-    
+
     ############################################################################
-    Ui    <- runif(n, 0, 100*g2(ZETA,G = G))/100
+    Ui    <- stats::runif(n, 0, 100*g2(ZETA,G = G))/100
     L.z   <- G + 1 + floor(
-      (log(Ui) - (log( (G * kappa + 1) / (G + 1) ) + 
+      (log(Ui) - (log( (G * kappa + 1) / (G + 1) ) +
                     log( (1 - kappa) / (G * kappa + 1) )))/
                     log(((G * kappa + kappa) / (G * kappa + 1)) ))
     if(length(L.z)==0){ L.z <- 1 }
@@ -185,20 +178,20 @@ Brand_fct <- function(Y,
     L    <- max(c(L.z, G.z))
     xi   <- g2(1:(L), G = G)
     PL   <- c(1:(L))
-    
+
     # old labels = G
     L_new = L - G
-    
+
     #############################################################################
     pidir   <- c(Update.pi(alphabeta = alphabeta, aDir = aDir, G = G))
     #######################################################################
     u       <- UPD_Sticks_Beta_cpp(AB = alphabeta,L_new = L_new,alphaDP = aDP)
     if(L==1){
-      omega <- 1  
+      omega <- 1
     }else{
       omega <- StickBreaker_cpp(u)
     }
-    
+
     log_pitilde <- log_pitilde.maker(pidir, omega, G)  # pitilde contains L = G + L_new components
     #######################################################################
     tau        <- Update_tau_l(a_tau = a_tau,b_tau = b_tau,
@@ -212,18 +205,18 @@ Brand_fct <- function(Y,
     #####
     effe.test  <- Update_effe_test_t_cpp(Y = Y,
                                          alphabeta =  alphabeta, L_new =  L_new,
-                                         R =  R, 
+                                         R =  R,
                                          ak = ak,
                                          t = t,
                                          tau_k = tau,
                                          sigma_test = as.matrix(sigma.test))
-    
+
     sigma.test <- Update_sigma_test_t_cpp(Y = Y, alphabeta = alphabeta, t = t,
                                           asig = a_H,bsig =  b_H,L_new =  L_new,
                                           effe_test = effe.test)
     #######################################################################
     if (learning_type %in% c("transductive", "training_stochastic")) {
-      
+
       effe.train  <- Update_effe_train_t_cpp(
         Y = Y,
         G = G,
@@ -233,7 +226,7 @@ Brand_fct <- function(Y,
         sigma_train = sigma.train,
         KAPPAG = KappaG
       )
-      
+
       sigma.train <- Update_sigma_train_t_cpp(
         Y = Y,
         alphabeta = alphabeta,
@@ -260,7 +253,7 @@ Brand_fct <- function(Y,
     effe.test    <- effe.test[,u.ind]
     sigma.test   <- sigma.test[,u.ind]
     ZETA[ZETA>G] <- as.numeric(factor(ZETA[ZETA>G]))+G
-    
+
     alphabeta <- zeta_to_alphabeta(ZETA,n,G)
     #############################################################################################
     if(fixed_alphaDP  & sim == 1){
@@ -270,21 +263,21 @@ Brand_fct <- function(Y,
       uz     <- length(unique(beta0[beta0>0]))
       n_nov  <-  sum(alphabeta[,1]==0)
       if(uz==0){ # if no obs in novelty, sample from prior
-        aDP <- rgamma(1,a_alpha,b_alpha)
+        aDP <- stats::rgamma(1,a_alpha,b_alpha)
       }else{
-        eta    <- rbeta(1, aDP + 1, n_nov)
+        eta    <- stats::rbeta(1, aDP + 1, n_nov)
         Q      <- (a_alpha + uz - 1) / (n_nov * (b_alpha - log(eta)))
         pi_eta <- Q / (1 + Q)
         aDP    <-
           ifelse(
-            runif(1) < pi_eta,
-            rgamma(1, a_alpha + uz,   b_alpha - log(eta)),
-            rgamma(1, a_alpha + uz - 1, b_alpha - log(eta))
+            stats::runif(1) < pi_eta,
+            stats::rgamma(1, a_alpha + uz,   b_alpha - log(eta)),
+            stats::rgamma(1, a_alpha + uz - 1, b_alpha - log(eta))
           )
       }}
     ############################################################################################
-    
-    
+
+
     if (sim > burn_in && ((sim - burn_in) %% thinning == 0)) {
       rr                <- floor((sim - burn_in)/thinning);
       PROB[rr,]         <- pidir
@@ -297,18 +290,18 @@ Brand_fct <- function(Y,
       EFFE.TEST[[rr]]   <- effe.test
       SIGMA.TEST[[rr]]  <- sigma.test
       TAU[[rr]]         <- tau
-      AK[[rr]]          <- ak 
+      AK[[rr]]          <- ak
       AlphaDP[rr]       <- aDP
       USLICE[,rr]       <- Ui
     }
-    ################################################################   
-    ################################################################   
+    ################################################################
+    ################################################################
     if (verbose) {
       ipbar <- ipbar + 1
-      setTxtProgressBar(pbar, ipbar)
+      utils::setTxtProgressBar(pbar, ipbar)
     }
   }
-  
+
   # If training fixed I only report the output from robust information extraction
   if (learning_type %in% c("inductive", "training_fixed")) {
     EFFE.TRAIN  <- effe.train

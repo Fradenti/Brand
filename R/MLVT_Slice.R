@@ -1,8 +1,6 @@
-library(LaplacesDemon)
-library(MCMCpack)
-
+#' @export
 major.vote <- function(x){
-  as.numeric(names(sort(table(x),decreasing = TRUE))[1]) 
+  as.numeric(names(sort(table(x),decreasing = TRUE))[1])
 }
 
 
@@ -23,7 +21,7 @@ log_pitilde.maker <- function(pi, omega, G) {
 
 
 StartingEst <- function(X, categ, raw_MCD, h_MCD, G) {
-  
+
   if (h_MCD == 1) {
     #standard non-robust methods are computed
     estimates_from_train <-
@@ -34,7 +32,7 @@ StartingEst <- function(X, categ, raw_MCD, h_MCD, G) {
     robust_estimates_from_train <-
       lapply(unique(sort(categ)), function(group)
         rrcov::CovMcd(x = X[categ == group, ], alpha = h_MCD))
-    
+
     if (raw_MCD) {
       xbar_j <-
         sapply(1:G, function(g)
@@ -77,7 +75,7 @@ zeta_to_alphabeta <- function(Z, n, G) {
 
 
 ###################################################################################
-
+#' @export
 Brand_mlvt <- function(Y,
                                              X,
                                              categ,
@@ -130,22 +128,22 @@ Brand_mlvt <- function(Y,
   Alpha_Beta   <- array(NA, dim = c(n, 2, NSIM))
   MU_new       <- vector("list", length = NSIM)
   SIGMA_new    <- vector("list", length = NSIM)
-  
+
   if (learning_type %in% c("transductive", "training_stochastic")) {
     MU_train     <- array(NA, dim = c(G, p, NSIM))
     SIGMA_train  <- array(NA, dim = c(p, p, G, NSIM))
   }
-  
+
   PiDir        <- matrix(NA, NSIM, G + 1) # G+1-th ? pi0
   Omega        <- vector("list", length = NSIM)
   AlphaDP      <- numeric(NSIM)
   U_Slice      <- matrix(NA, n, NSIM)
   #####################################################################################
   # inizialization
-  pidir         <- c(rdirichlet(1, aDir))
+  pidir         <- c(MCMCpack::rdirichlet(1, aDir))
   alphabeta     <- matrix(0, n, 2)
   alphabeta[, 1] <- sample(0:G, n, replace = T)
-  u             <- rbeta(n = L,
+  u             <- stats::rbeta(n = L,
                          shape1 = 1,
                          shape2 = aDP)
   omega         <- StickBreaker_cpp(V = u)
@@ -158,7 +156,7 @@ Brand_mlvt <- function(Y,
       replace = T,
       prob = omega
     )))
-  Sigma         <- replicate(L, riwish(v = v_H, S = S_H))
+  Sigma         <- replicate(L, MCMCpack::riwish(v = v_H, S = S_H))
   mu            <-
     sapply(1:L, function(ind)
       mvtnorm::rmvnorm(
@@ -169,16 +167,16 @@ Brand_mlvt <- function(Y,
   mu.train      <- xbar_j
   Sigma.train   <- S2_j
     # #####################################################################################
-  g2 <- function(j,G) ifelse(j<=G, (1-kappa)/(G+1), 
+  g2 <- function(j,G) ifelse(j<=G, (1-kappa)/(G+1),
                              (1-kappa)/(G+1) *
                                (((G+1)*kappa)/(G*kappa+1)) ^ (j-G-1)  )
-  
+
   ZETA <- alphaneta_to_zeta(alphabeta, n = n, G = G)
   # #####################################################################################
   if (verbose) {
     cat("MCMC progress:\n")
-    flush.console()
-    pbar <- txtProgressBar(min = 1,
+    utils::flush.console()
+    pbar <- utils::txtProgressBar(min = 1,
                            max = NSIM * thinning + burn_in,
                            style = 3)
     on.exit(close(pbar))
@@ -186,11 +184,11 @@ Brand_mlvt <- function(Y,
   }
   # #####################################################################################
   for (sim in 1:(NSIM * thinning + burn_in)) {
-    
-    
-    Ui    <- runif(n, 0, 100*g2(ZETA,G = G))/100
+
+
+    Ui    <- stats::runif(n, 0, 100*g2(ZETA,G = G))/100
     L.z   <- G + 1 + floor(
-      (log(Ui) - (log( (G * kappa + 1) / (G + 1) ) + 
+      (log(Ui) - (log( (G * kappa + 1) / (G + 1) ) +
                     log( (1 - kappa) / (G * kappa + 1) )))/
         log(((G * kappa + kappa) / (G * kappa + 1)) ))
     if(length(L.z)==0){ L.z <- 1 }
@@ -198,7 +196,7 @@ Brand_mlvt <- function(Y,
     L    <- max(c(L.z, G.z))
     xi   <- g2(1:(L), G = G)
     PL   <- c(1:(L))
-    
+
     # old labels = G
     L_new = L - G
     ##################################################################################
@@ -218,7 +216,7 @@ Brand_mlvt <- function(Y,
     } else{
       omega <- StickBreaker_cpp(u)
     }
-    
+
     # omegatilde <- Omegatilde.maker(pidir,omega,G)
     log_pitilde <- log_pitilde.maker(pidir, omega, G)
     ###################################################################################
@@ -247,13 +245,13 @@ Brand_mlvt <- function(Y,
         G = G,
         p = p
       )
-      
+
       mu.train    <- THETA_g[[1]]
       Sigma.train <- THETA_g[[2]]
     }
     mu_all <- cbind(mu.train, mu)
     Sigma_all <- abind::abind(Sigma.train, Sigma, along = 3)
-    
+
     ZETA <-
       Upd_Zeta_cpp(
         Y = Y,
@@ -267,15 +265,15 @@ Brand_mlvt <- function(Y,
         L_new = L_new,
         poss_lab = 1:(L_new + G)
       )
-    
+
     ind2 <- ZETA[ZETA > G]
     u.ind <- unique(sort(ind2)) - G
     mu    <- mu[, u.ind]
     Sigma <- Sigma[, , u.ind]
     ZETA[ZETA > G] <- as.numeric(factor(ZETA[ZETA > G])) + G
-    
+
     alphabeta <- zeta_to_alphabeta(ZETA, n, G)
-    
+
     if (fixed_alphaDP  & sim == 1) {
       aDP      <- aDP
     }else if (fixed_alphaDP == F){
@@ -283,24 +281,24 @@ Brand_mlvt <- function(Y,
       uz     <- length(unique(beta0[beta0>0]))
       n_nov  <-  sum(alphabeta[,1]==0)
       if(uz==0){ # if no obs in novelty, sample from prior
-        aDP <- rgamma(1,a_alpha,b_alpha)
+        aDP <- stats::rgamma(1,a_alpha,b_alpha)
       }else{
-      eta    <- rbeta(1, aDP + 1, n_nov)
+      eta    <- stats::rbeta(1, aDP + 1, n_nov)
       Q      <- (a_alpha + uz - 1) / (n_nov * (b_alpha - log(eta)))
       pi_eta <- Q / (1 + Q)
       aDP    <-
         ifelse(
-          runif(1) < pi_eta,
-          rgamma(1, a_alpha + uz,   b_alpha - log(eta)),
-          rgamma(1, a_alpha + uz - 1, b_alpha - log(eta))
+          stats::runif(1) < pi_eta,
+          stats::rgamma(1, a_alpha + uz,   b_alpha - log(eta)),
+          stats::rgamma(1, a_alpha + uz - 1, b_alpha - log(eta))
         )
     }}
     ############################################################################################
-    
+
     if (sim > burn_in &&
         ((sim - burn_in) %% thinning == 0)) {
       rr                 <- floor((sim - burn_in) / thinning)
-      
+
       PiDir[rr, ]         <- pidir
       Alpha_Beta[, , rr]   <- alphabeta
       Omega[[rr]]        <- omega
@@ -317,19 +315,19 @@ Brand_mlvt <- function(Y,
     ################################################################
     #   if (sim%%(verbose.step*thinning) == 0) {
     #     cat(paste("Sampling iteration: ", sim, " out of ",NSIM*thinning + burn_in,"\n",round(aDP,3),"\n"))}
-    
+
     if (verbose) {
       ipbar <- ipbar + 1
-      setTxtProgressBar(pbar, ipbar)
+      utils::setTxtProgressBar(pbar, ipbar)
     }
   }
-  
+
   # If training fixed I only report the output from robust information extraction
   if (learning_type %in% c("inductive", "training_fixed")) {
     MU_train     <- t(mu.train)
     SIGMA_train <- Sigma.train
   }
-  
+
   if (light) {
     out <-  list(
       P         = PiDir,
@@ -344,7 +342,7 @@ Brand_mlvt <- function(Y,
       alphaDP   = AlphaDP,
       Uslice    = U_Slice
     )
-    
+
   } else{
     out <-  list(
       P         = PiDir,
@@ -361,7 +359,7 @@ Brand_mlvt <- function(Y,
       prior     = prior
     )
   }
-  
-  
+
+
   return(out)
 }
