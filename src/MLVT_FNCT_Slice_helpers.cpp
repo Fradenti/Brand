@@ -10,6 +10,26 @@ using namespace Rcpp;
 
 // General functions
 
+
+// [[Rcpp::export]]
+arma::mat PSM(arma::mat inds){
+  int nsim = inds.n_rows;
+  int n= inds.n_cols;
+  arma::mat PSM(n,n), D(n,n); 
+  D.eye(); PSM.zeros();
+  
+  for(int i=0; i<n; i++){
+    for(int j=i+1; j<n; j++){
+      arma::colvec Z = (inds.col(i)-inds.col(j));
+      arma::uvec success = find(Z==0);
+      PSM(i,j) = success.n_elem;
+      PSM(j,i) = PSM(i,j);
+    }
+  }
+  
+  return(PSM/nsim + D);
+  
+}
 // [[Rcpp::export]]
 double LogSumExp(arma::colvec logX){
   double a = max(logX);
@@ -57,19 +77,16 @@ arma::colvec UPD_Sticks_Beta_cpp(arma::mat AB,
 
   if(beta_lab_newgroups.n_rows==0){
 
-    for(int l=0; l<(L_new-1); l++){
+    for(int l=0; l<(L_new); l++){  //for(int l=0; l<(L_new-1); l++){
       Sticks[l] = R::rbeta(1 ,
                            alphaDP  );  }
   }else{
-    for(int l=0; l<(L_new-1); l++){
+    for(int l=0; l<(L_new); l++){ //   for(int l=0; l<(L_new-1); l++){
       Sticks[l] = R::rbeta(1 + accu( beta_lab_newgroups == (l+1)),
                            alphaDP + accu(beta_lab_newgroups > (l+1)) );
     }
   }
 
-
-
-  Sticks[L_new-1]=1.;
   return Sticks;
 }
 
@@ -692,3 +709,4 @@ arma::mat Upd_ZETA_t_SLICE(arma::mat Y,
 
   return(res_Z);
 }
+
