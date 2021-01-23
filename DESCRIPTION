@@ -1,12 +1,13 @@
 Package: brand
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Bayesian Robust Adaptive Novelty Detector
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
+Authors@R: c(
+    person("Francesco", "Denti", email = "hadley@rstudio.com", role = c("cre","aut")),
+    person("Andrea", "Cappozzo", email = "winston@rstudio.com", role = c("aut")))
 Description: More about what it does (maybe more than one line)
     Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)

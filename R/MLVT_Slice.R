@@ -1,26 +1,10 @@
-#' @export
-major.vote <- function(x){
-  as.numeric(names(sort(table(x),decreasing = TRUE))[1])
-}
 
 
-Update.pi <- function(alphabeta, aDir, G) {
-  alpha        <- alphabeta[, 1]
-  ns           <- table(factor(alpha, levels = 0:G))
-  # tabulate??
-  nj           <- c(ns[-1], ns[1])
-  aDirtilde    <- nj + aDir
-  return(MCMCpack::rdirichlet(1, aDirtilde))
-}
-
-################################ robust estimates extractor
-
-log_pitilde.maker <- function(pi, omega, G) {
-  return(c(log(pi[-(G + 1)]), log(pi[G + 1]) + log(omega)))
-}
 
 
 StartingEst <- function(X, categ, raw_MCD, h_MCD, G) {
+
+  p <- ncol(X)
 
   if (h_MCD == 1) {
     #standard non-robust methods are computed
@@ -59,42 +43,49 @@ StartingEst <- function(X, categ, raw_MCD, h_MCD, G) {
   return(list(xbar_j, S2_j))
 }
 
-alphaneta_to_zeta <- function(AB, n, G) {
-  Z           <- AB[, 1]
-  Z[AB[, 2] > 0] <- AB[AB[, 2] > 0, 2] + G
-  return(Z)
-}
-
-zeta_to_alphabeta <- function(Z, n, G) {
-  AB   <- matrix(0, n, 2)
-  ind1 <- which(Z <= G)
-  AB[ind1, 1]  <- Z[ind1]
-  AB[-ind1, 2] <- Z[-ind1] - G
-  return(AB)
-}
 
 
 ###################################################################################
+
+#' Multivariate Brand
+#'
+#' @param Y data
+#' @param X data
+#' @param categ xxx
+#' @param prior xxx
+#' @param L xxx
+#' @param h_MCD xxx
+#' @param raw_MCD xxx
+#' @param NSIM xxx
+#' @param thinning xxx
+#' @param burn_in xxx
+#' @param verbose xxx
+#' @param fixed_alphaDP xxx
+#' @param kappa xxx
+#' @param light xxx
+#' @param learning_type xxx
+#'
+#' @return model
 #' @export
+#'
 Brand_mlvt <- function(Y,
-                                             X,
-                                             categ,
-                                             prior,
-                                             L,
-                                             h_MCD = .75,
-                                             # percentage of untrimmed observations for computing robust prior mean vector and scatter from train set
-                                             raw_MCD = F,
-                                             NSIM,
-                                             thinning,
-                                             burn_in,
-                                             verbose = T,
-                                             fixed_alphaDP = F,
-                                             kappa = .75,
-                                             light = F,
-                                             learning_type = c("transductive", "inductive")) {
+                       X,
+                       categ,
+                       prior,
+                       L,
+                       h_MCD = .75,
+                       # percentage of untrimmed observations for computing robust prior mean vector and scatter from train set
+                       raw_MCD = F,
+                       NSIM,
+                       thinning,
+                       burn_in,
+                       verbose = T,
+                       fixed_alphaDP = F,
+                       kappa = .75,
+                       light = F,
+                       learning_type = c("transductive", "inductive")) {
   #####################################################################################
-  Y <-
-    data.matrix(Y) # for avoiding problems in dealing with data.frame objects
+  Y <- data.matrix(Y) # for avoiding problems in dealing with data.frame objects
   X <- data.matrix(X)
   #####################################################################################
   n      <- nrow(Y) # sample size test data
@@ -137,6 +128,7 @@ Brand_mlvt <- function(Y,
   PiDir        <- matrix(NA, NSIM, G + 1) # G+1-th ? pi0
   Omega        <- vector("list", length = NSIM)
   AlphaDP      <- numeric(NSIM)
+  LZ           <- numeric(NSIM)
   U_Slice      <- matrix(NA, n, NSIM)
   #####################################################################################
   # inizialization
@@ -167,9 +159,7 @@ Brand_mlvt <- function(Y,
   mu.train      <- xbar_j
   Sigma.train   <- S2_j
     # #####################################################################################
-  g2 <- function(j,G) ifelse(j<=G, (1-kappa)/(G+1),
-                             (1-kappa)/(G+1) *
-                               (((G+1)*kappa)/(G*kappa+1)) ^ (j-G-1)  )
+
 
   ZETA <- alphaneta_to_zeta(alphabeta, n = n, G = G)
   # #####################################################################################
@@ -186,15 +176,13 @@ Brand_mlvt <- function(Y,
   for (sim in 1:(NSIM * thinning + burn_in)) {
 
 
-    Ui    <- stats::runif(n, 0, 100*g2(ZETA,G = G))/100
-    L.z   <- G + 1 + floor(
-      (log(Ui) - (log( (G * kappa + 1) / (G + 1) ) +
-                    log( (1 - kappa) / (G * kappa + 1) )))/
-        log(((G * kappa + kappa) / (G * kappa + 1)) ))
-    if(length(L.z)==0){ L.z <- 1 }
+    Ui    <- stats::runif(n, 0, g2(ZETA,G = G,kappa = kappa))
+    L.z   <- threshold.slice(min(Ui),kappa,G)
+    #if(length(L.z)==0){ L.z <- 1 }
     G.z  <- max(alphabeta[,2])
     L    <- max(c(L.z, G.z))
-    xi   <- g2(1:(L), G = G)
+
+    xi   <- g2(1:(L), G = G,kappa = kappa)
     PL   <- c(1:(L))
 
     # old labels = G
@@ -266,41 +254,28 @@ Brand_mlvt <- function(Y,
         poss_lab = 1:(L_new + G)
       )
 
-    ind2 <- ZETA[ZETA > G]
-    u.ind <- unique(sort(ind2)) - G
-    mu    <- mu[, u.ind]
-    Sigma <- Sigma[, , u.ind]
-    ZETA[ZETA > G] <- as.numeric(factor(ZETA[ZETA > G])) + G
+    #ind2 <- ZETA[ZETA > G]
+    #u.ind <- unique(sort(ind2)) - G
+    #mu    <- mu[, u.ind]
+    #Sigma <- Sigma[, , u.ind]
+    #ZETA[ZETA > G] <- as.numeric(factor(ZETA[ZETA > G])) + G
 
     alphabeta <- zeta_to_alphabeta(ZETA, n, G)
 
-    if (fixed_alphaDP  & sim == 1) {
-      aDP      <- aDP
-    }else if (fixed_alphaDP == F){
-      beta0  <- alphabeta[,2]
-      uz     <- length(unique(beta0[beta0>0]))
-      n_nov  <-  sum(alphabeta[,1]==0)
-      if(uz==0){ # if no obs in novelty, sample from prior
-        aDP <- stats::rgamma(1,a_alpha,b_alpha)
-      }else{
-      eta    <- stats::rbeta(1, aDP + 1, n_nov)
-      Q      <- (a_alpha + uz - 1) / (n_nov * (b_alpha - log(eta)))
-      pi_eta <- Q / (1 + Q)
-      aDP    <-
-        ifelse(
-          stats::runif(1) < pi_eta,
-          stats::rgamma(1, a_alpha + uz,   b_alpha - log(eta)),
-          stats::rgamma(1, a_alpha + uz - 1, b_alpha - log(eta))
-        )
-    }}
+    ############################################################################################
+    if (fixed_alphaDP == F){
+      aDP <-  Update_concentration_parameter(alphabeta = alphabeta,
+                                             a_alpha = a_alpha, b_alpha = b_alpha,
+                                             aDP = aDP)
+    }
     ############################################################################################
 
     if (sim > burn_in &&
         ((sim - burn_in) %% thinning == 0)) {
       rr                 <- floor((sim - burn_in) / thinning)
-
-      PiDir[rr, ]         <- pidir
-      Alpha_Beta[, , rr]   <- alphabeta
+      LZ[rr]             <- L.z
+      PiDir[rr, ]        <- pidir
+      Alpha_Beta[, , rr] <- alphabeta
       Omega[[rr]]        <- omega
       MU_new[[rr]]       <- t(mu)
       SIGMA_new[[rr]]    <- Sigma
@@ -308,7 +283,7 @@ Brand_mlvt <- function(Y,
         MU_train[, , rr]     <- t(mu.train)
         SIGMA_train[, , , rr] <- Sigma.train
       }
-      AlphaDP[rr]        <- aDP
+      AlphaDP[rr]         <- aDP
       U_Slice[, rr]       <- Ui
     }
     ################################################################
@@ -340,7 +315,8 @@ Brand_mlvt <- function(Y,
       x_b       = xbar_j,
       s_b       = S2_j,
       alphaDP   = AlphaDP,
-      Uslice    = U_Slice
+      Uslice    = U_Slice,
+      LZ        = LZ
     )
 
   } else{
@@ -356,7 +332,9 @@ Brand_mlvt <- function(Y,
       s_b       = S2_j,
       alphaDP   = AlphaDP,
       Uslice    = U_Slice,
-      prior     = prior
+      prior     = prior,
+      LZ        = LZ
+
     )
   }
 

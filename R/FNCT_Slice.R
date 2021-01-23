@@ -1,11 +1,4 @@
 
-Update.pi <- function(alphabeta,aDir,G){
-  alpha        <- alphabeta[,1]
-  ns           <- table(factor(alpha,levels = 0:G))
-  nj           <- c(ns[-1],ns[1])
-  aDirtilde    <- nj+aDir
-  return(MCMCpack::rdirichlet(1,aDirtilde))
-}
 
 a.AND.b_sigmaT_train <- function(sigma.est.train, # matrix TxG
                                  vg,t,G){
@@ -16,33 +9,6 @@ a.AND.b_sigmaT_train <- function(sigma.est.train, # matrix TxG
   return(ab)
 }
 
-
-
-log_pitilde.maker <- function(pi, omega, G) {
-  return(c(log(pi[-(G + 1)]), log(pi[G + 1]) + log(omega)))
-
-}
-
-alphaneta_to_zeta <- function(AB,n,G){
-  Z           <- AB[,1]
-  Z[AB[,2]>0] <- AB[AB[,2]>0,2] + G
-  return(Z)
-}
-
-zeta_to_alphabeta <- function(Z,n,G){
-  AB   <- matrix(0,n,2)
-  ind1 <- which(Z<=G)
-
-  if(length(ind1)==0){
-    AB[,2] <- Z - G
-  }else{
-    AB[ind1,1]  <- Z[ind1]
-    AB[-ind1,2] <- Z[-ind1] - G
-  }
-
-
-  return(AB)
-}
 
 extract_robust_tr_v2 <-
   Vectorize(function(single_func_set,
@@ -69,18 +35,34 @@ extract_robust_tr_v2 <-
     list(center=effe.train,sigma2=sigma2,basis=robust_procedure$center)
   }, vectorize.args = "single_func_set")
 
+
+#' Functional Brand
+#'
+#' @param Y xxx
+#' @param prior xxx
+#' @param L xxx
+#' @param nsim xxx
+#' @param thinning xxx
+#' @param burn_in xxx
+#' @param fixed_alphaDP xxx
+#' @param kappa xxx
+#' @param verbose xxx
+#' @param learning_type xxx
+#'
+#' @return model
 #' @export
+#'
 Brand_fct <- function(Y,
-                               prior,
-                               L,
-                               # L numero possibili gruppi
-                               nsim,
-                               thinning,
-                               burn_in,
-                               fixed_alphaDP = F,
-                               kappa = .5,
-                               verbose = 1,
-                               learning_type = c("transductive", "inductive")) {
+                      prior,
+                      L,
+                      # L numero possibili gruppi
+                      nsim,
+                      thinning,
+                      burn_in,
+                      fixed_alphaDP = F,
+                      kappa = .5,
+                      verbose = 1,
+                      learning_type = c("transductive", "inductive")) {
 
   #####################################################################
   ############
@@ -168,20 +150,17 @@ Brand_fct <- function(Y,
   for(sim in 1:(nsim*thinning + burn_in)){
 
     ############################################################################
-    Ui    <- stats::runif(n, 0, 100*g2(ZETA,G = G))/100
-    L.z   <- G + 1 + floor(
-      (log(Ui) - (log( (G * kappa + 1) / (G + 1) ) +
-                    log( (1 - kappa) / (G * kappa + 1) )))/
-                    log(((G * kappa + kappa) / (G * kappa + 1)) ))
-    if(length(L.z)==0){ L.z <- 1 }
+    Ui    <- stats::runif(n, 0, g2(ZETA,G = G,kappa = kappa))
+    L.z   <- threshold.slice(min(Ui),kappa,G)
+    #if(length(L.z)==0){ L.z <- 1 }
     G.z  <- max(alphabeta[,2])
     L    <- max(c(L.z, G.z))
-    xi   <- g2(1:(L), G = G)
+
+    xi   <- g2(1:(L), G = G,kappa = kappa)
     PL   <- c(1:(L))
 
     # old labels = G
     L_new = L - G
-
     #############################################################################
     pidir   <- c(Update.pi(alphabeta = alphabeta, aDir = aDir, G = G))
     #######################################################################
@@ -248,35 +227,21 @@ Brand_fct <- function(Y,
                              log_pitilde = log_pitilde,
                              G = G,n = n,L_new = L_new,poss_lab = PL)
     ########################################################################
-    ind2         <- ZETA[ZETA>G]
-    u.ind        <- unique(sort(ind2))-G
-    effe.test    <- effe.test[,u.ind]
-    sigma.test   <- sigma.test[,u.ind]
-    ZETA[ZETA>G] <- as.numeric(factor(ZETA[ZETA>G]))+G
+    # prime 4 righe forse lasciabili per questioni di output piu leggero
+    #ind2         <- ZETA[ZETA>G]
+    #u.ind        <- unique(sort(ind2))-G
+    #effe.test    <- effe.test[,u.ind]
+    #sigma.test   <- sigma.test[,u.ind]
+    #ZETA[ZETA>G] <- as.numeric(factor(ZETA[ZETA>G]))+G
 
     alphabeta <- zeta_to_alphabeta(ZETA,n,G)
-    #############################################################################################
-    if(fixed_alphaDP  & sim == 1){
-      aDP      <- aDP
-    }else if (fixed_alphaDP == F){
-      beta0  <- alphabeta[,2]
-      uz     <- length(unique(beta0[beta0>0]))
-      n_nov  <-  sum(alphabeta[,1]==0)
-      if(uz==0){ # if no obs in novelty, sample from prior
-        aDP <- stats::rgamma(1,a_alpha,b_alpha)
-      }else{
-        eta    <- stats::rbeta(1, aDP + 1, n_nov)
-        Q      <- (a_alpha + uz - 1) / (n_nov * (b_alpha - log(eta)))
-        pi_eta <- Q / (1 + Q)
-        aDP    <-
-          ifelse(
-            stats::runif(1) < pi_eta,
-            stats::rgamma(1, a_alpha + uz,   b_alpha - log(eta)),
-            stats::rgamma(1, a_alpha + uz - 1, b_alpha - log(eta))
-          )
-      }}
     ############################################################################################
-
+    if (fixed_alphaDP == F){
+      aDP <-  Update_concentration_parameter(alphabeta = alphabeta,
+                                             a_alpha = a_alpha, b_alpha = b_alpha,
+                                             aDP = aDP)
+    }
+    ############################################################################################
 
     if (sim > burn_in && ((sim - burn_in) %% thinning == 0)) {
       rr                <- floor((sim - burn_in)/thinning);

@@ -6,6 +6,17 @@
 
 using namespace Rcpp;
 
+// PSM
+arma::mat PSM(arma::mat inds);
+RcppExport SEXP _brand_PSM(SEXP indsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::mat >::type inds(indsSEXP);
+    rcpp_result_gen = Rcpp::wrap(PSM(inds));
+    return rcpp_result_gen;
+END_RCPP
+}
 // LogSumExp
 double LogSumExp(arma::colvec logX);
 RcppExport SEXP _brand_LogSumExp(SEXP logXSEXP) {
@@ -271,6 +282,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_brand_PSM", (DL_FUNC) &_brand_PSM, 1},
     {"_brand_LogSumExp", (DL_FUNC) &_brand_LogSumExp, 1},
     {"_brand_dmvnrm_arma", (DL_FUNC) &_brand_dmvnrm_arma, 4},
     {"_brand_UPD_Sticks_Beta_cpp", (DL_FUNC) &_brand_UPD_Sticks_Beta_cpp, 3},
