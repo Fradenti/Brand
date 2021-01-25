@@ -132,13 +132,13 @@ Brand_mlvt <- function(Y,
   U_Slice      <- matrix(NA, n, NSIM)
   #####################################################################################
   # inizialization
-  pidir         <- c(MCMCpack::rdirichlet(1, aDir))
-  alphabeta     <- matrix(0, n, 2)
+  pidir          <- c(MCMCpack::rdirichlet(1, aDir))
+  alphabeta      <- matrix(0, n, 2)
   alphabeta[, 1] <- sample(0:G, n, replace = T)
-  u             <- stats::rbeta(n = L,
+  u              <- stats::rbeta(n = L,
                          shape1 = 1,
                          shape2 = aDP)
-  omega         <- StickBreaker_cpp(V = u)
+  omega          <- StickBreaker_cpp(V = u)
   alphabeta[alphabeta[, 1] == 0, 2] <-
     as.numeric(factor(sample(
       1:L,

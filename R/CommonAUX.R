@@ -58,8 +58,6 @@ zeta_to_alphabeta <- function(Z,n,G){
     AB[ind1,1]  <- Z[ind1]
     AB[-ind1,2] <- Z[-ind1] - G
   }
-
-
   return(AB)
 }
 
