@@ -1,5 +1,5 @@
 
-
+#' @export
 a.AND.b_sigmaT_train <- function(sigma.est.train, # matrix TxG
                                  vg,t,G){
   ab      <- array(NA,c(t,G,2))
@@ -9,7 +9,17 @@ a.AND.b_sigmaT_train <- function(sigma.est.train, # matrix TxG
   return(ab)
 }
 
-
+#' Title
+#'
+#' @param single_func_set
+#' @param x
+#' @param basis_evaluated
+#' @param h_MCD
+#'
+#' @return
+#' @export
+#'
+#' @examples
 extract_robust_tr_v2 <-
   Vectorize(function(single_func_set,
                      x = x, basis_evaluated,
@@ -62,7 +72,8 @@ Brand_fct <- function(Y,
                       fixed_alphaDP = F,
                       kappa = .5,
                       verbose = 1,
-                      learning_type = c("transductive", "inductive")) {
+                      learning_type = c("transductive", "inductive"),
+                      light.output = F) {
 
   #####################################################################
   ############
@@ -94,6 +105,7 @@ Brand_fct <- function(Y,
   AK          <- vector("list",length = nsim)
   ALPHA.BETA  <- array( NA,dim = c(n,2,nsim))
   AlphaDP     <- numeric(nsim)
+  LZ          <- numeric(nsim)
   USLICE      <- matrix(NA,n,nsim)
   ###
   if (learning_type %in% c("transductive", "training_stochastic")) {
@@ -133,10 +145,6 @@ Brand_fct <- function(Y,
   }
   ZETA <- alphaneta_to_zeta(alphabeta,n = n,G = G)
   #####################################################################################
-  g2 <- function(j,G) ifelse(j<=G, (1-kappa)/(G+1),
-                             (1-kappa)/(G+1) *
-                               (((G+1)*kappa)/(G*kappa+1)) ^ (j-G-1)  )
-  #####################################################################################
   if (verbose) {
     cat("MCMC progress:\n")
     utils::flush.console()
@@ -164,7 +172,7 @@ Brand_fct <- function(Y,
     #############################################################################
     pidir   <- c(Update.pi(alphabeta = alphabeta, aDir = aDir, G = G))
     #######################################################################
-    u       <- UPD_Sticks_Beta_cpp(AB = alphabeta,L_new = L_new,alphaDP = aDP)
+    u       <- UPD_Sticks_Beta_cpp(AB = alphabeta,L_new = L_new, alphaDP = aDP)
     if(L==1){
       omega <- 1
     }else{
@@ -173,26 +181,47 @@ Brand_fct <- function(Y,
 
     log_pitilde <- log_pitilde.maker(pidir, omega, G)  # pitilde contains L = G + L_new components
     #######################################################################
-    tau        <- Update_tau_l(a_tau = a_tau,b_tau = b_tau,
-                               effe_test = as.matrix(effe.test),
-                               L_new = L_new,
-                               t = t,
-                               OOR = OneOverR,
-                               a_l = ak)
-    ak         <- Update_a_l(effe_test = as.matrix(effe.test),L_new = L_new,tau_l = tau,
-                             R = R,s = s_tau,t = t,OneOverR = OneOverR)
-    #####
-    effe.test  <- Update_effe_test_t_cpp(Y = Y,
-                                         alphabeta =  alphabeta, L_new =  L_new,
-                                         R =  R,
-                                         ak = ak,
-                                         t = t,
-                                         tau_k = tau,
-                                         sigma_test = as.matrix(sigma.test))
+    tau        <- Update_tau_l(
+      a_tau = a_tau,
+      b_tau = b_tau,
+      effe_test = as.matrix(effe.test),
+      L_new = L_new,
+      t = t,
+      OOR = OneOverR,
+      a_l = ak
+    )
+    ak         <-
+      Update_a_l(
+        effe_test = as.matrix(effe.test),
+        L_new = L_new,
+        tau_l = tau,
+        R = R,
+        s = s_tau,
+        t = t,
+        OneOverR = OneOverR
+      )
+    #######################################################################
+    effe.test  <- Update_effe_test_t_cpp(
+      Y = Y,
+      alphabeta =  alphabeta,
+      L_new =  L_new,
+      R =  R,
+      ak = ak,
+      t = t,
+      tau_k = tau,
+      sigma_test = as.matrix(sigma.test)
+    )
 
-    sigma.test <- Update_sigma_test_t_cpp(Y = Y, alphabeta = alphabeta, t = t,
-                                          asig = a_H,bsig =  b_H,L_new =  L_new,
-                                          effe_test = effe.test)
+    sigma.test <-
+      Update_sigma_test_t_cpp(
+        Y = Y,
+        alphabeta = alphabeta,
+        t = t,
+        asig = a_H,
+        bsig =  b_H,
+        L_new =  L_new,
+        effe_test = effe.test
+      )
     #######################################################################
     if (learning_type %in% c("transductive", "training_stochastic")) {
 
@@ -220,12 +249,18 @@ Brand_fct <- function(Y,
     effe_all  <- cbind(effe.train, effe.test)
     sigma_all <- cbind(sigma.train,sigma.test)
     ###############################################################################
-    ZETA <- Upd_ZETA_t_SLICE(Y = Y,effe_ALL = effe_all,
-                             sigma_ALL = sigma_all,
-                             Uitilde = Ui,
-                             xitilde = xi,
-                             log_pitilde = log_pitilde,
-                             G = G,n = n,L_new = L_new,poss_lab = PL)
+    ZETA <- Upd_ZETA_t_SLICE(
+      Y = Y,
+      effe_ALL = effe_all,
+      sigma_ALL = sigma_all,
+      Uitilde = Ui,
+      xitilde = xi,
+      log_pitilde = log_pitilde,
+      G = G,
+      n = n,
+      L_new = L_new,
+      poss_lab = PL
+    )
     ########################################################################
     # prime 4 righe forse lasciabili per questioni di output piu leggero
     #ind2         <- ZETA[ZETA>G]
@@ -247,17 +282,22 @@ Brand_fct <- function(Y,
       rr                <- floor((sim - burn_in)/thinning);
       PROB[rr,]         <- pidir
       ALPHA.BETA[,,rr]  <- alphabeta
-      if (learning_type %in% c("transductive", "training_stochastic")) {
-        EFFE.TRAIN[, , rr]  <- effe.train
-        SIGMA.TRAIN[, , rr] <- sigma.train
-      }
+      LZ[rr]            <- L.z
+      AlphaDP[rr]       <- aDP
+
+
+      if(!light.output){
+        if (learning_type %in% c("transductive", "training_stochastic")) {
+          EFFE.TRAIN[, , rr]  <- effe.train
+          SIGMA.TRAIN[, , rr] <- sigma.train
+        }
       OMEGA[[rr]]       <- omega
       EFFE.TEST[[rr]]   <- effe.test
       SIGMA.TEST[[rr]]  <- sigma.test
       TAU[[rr]]         <- tau
       AK[[rr]]          <- ak
-      AlphaDP[rr]       <- aDP
-      USLICE[,rr]       <- Ui
+      #USLICE[,rr]       <- Ui
+      }
     }
     ################################################################
     ################################################################
@@ -285,7 +325,7 @@ Brand_fct <- function(Y,
     STr0 =  sigma.train0,
     FTe =  EFFE.TEST,
     STe =  SIGMA.TEST,
-    USL = USLICE,
+#    USL = USLICE,
     prior=prior)
   return(out)
 }

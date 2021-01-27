@@ -15,9 +15,9 @@ using namespace Rcpp;
 arma::mat PSM(arma::mat inds){
   int nsim = inds.n_rows;
   int n= inds.n_cols;
-  arma::mat PSM(n,n), D(n,n); 
+  arma::mat PSM(n,n), D(n,n);
   D.eye(); PSM.zeros();
-  
+
   for(int i=0; i<n; i++){
     for(int j=i+1; j<n; j++){
       arma::colvec Z = (inds.col(i)-inds.col(j));
@@ -26,9 +26,9 @@ arma::mat PSM(arma::mat inds){
       PSM(j,i) = PSM(i,j);
     }
   }
-  
+
   return(PSM/nsim + D);
-  
+
 }
 // [[Rcpp::export]]
 double LogSumExp(arma::colvec logX){
@@ -84,6 +84,11 @@ arma::colvec UPD_Sticks_Beta_cpp(arma::mat AB,
     for(int l=0; l<(L_new); l++){ //   for(int l=0; l<(L_new-1); l++){
       Sticks[l] = R::rbeta(1 + accu( beta_lab_newgroups == (l+1)),
                            alphaDP + accu(beta_lab_newgroups > (l+1)) );
+  /*  if(Sticks[l]==1){
+      Rcout << l;
+      Sticks[l] = Sticks[l] - 1e-6;  // little epsilon removed to avoid numerical issues
+  }*/
+
     }
   }
 

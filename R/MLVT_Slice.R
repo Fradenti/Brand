@@ -56,7 +56,7 @@ StartingEst <- function(X, categ, raw_MCD, h_MCD, G) {
 #' @param L xxx
 #' @param h_MCD xxx
 #' @param raw_MCD xxx
-#' @param NSIM xxx
+#' @param nsim xxx
 #' @param thinning xxx
 #' @param burn_in xxx
 #' @param verbose xxx
@@ -76,14 +76,15 @@ Brand_mlvt <- function(Y,
                        h_MCD = .75,
                        # percentage of untrimmed observations for computing robust prior mean vector and scatter from train set
                        raw_MCD = F,
-                       NSIM,
+                       nsim,
                        thinning,
                        burn_in,
                        verbose = T,
                        fixed_alphaDP = F,
                        kappa = .75,
                        light = F,
-                       learning_type = c("transductive", "inductive")) {
+                       learning_type = c("transductive", "inductive"),
+                       light.output =F ) {
   #####################################################################################
   Y <- data.matrix(Y) # for avoiding problems in dealing with data.frame objects
   X <- data.matrix(X)
@@ -116,20 +117,20 @@ Brand_mlvt <- function(Y,
   b_alpha  <- prior$b_alphaDP
   #####################################################################################
   ### Containers
-  Alpha_Beta   <- array(NA, dim = c(n, 2, NSIM))
-  MU_new       <- vector("list", length = NSIM)
-  SIGMA_new    <- vector("list", length = NSIM)
+  Alpha_Beta   <- array(NA, dim = c(n, 2, nsim))
+  MU_new       <- vector("list", length = nsim)
+  SIGMA_new    <- vector("list", length = nsim)
 
   if (learning_type %in% c("transductive", "training_stochastic")) {
-    MU_train     <- array(NA, dim = c(G, p, NSIM))
-    SIGMA_train  <- array(NA, dim = c(p, p, G, NSIM))
+    MU_train     <- array(NA, dim = c(G, p, nsim))
+    SIGMA_train  <- array(NA, dim = c(p, p, G, nsim))
   }
 
-  PiDir        <- matrix(NA, NSIM, G + 1) # G+1-th ? pi0
-  Omega        <- vector("list", length = NSIM)
-  AlphaDP      <- numeric(NSIM)
-  LZ           <- numeric(NSIM)
-  U_Slice      <- matrix(NA, n, NSIM)
+  PiDir        <- matrix(NA, nsim, G + 1) # G+1-th ? pi0
+  Omega        <- vector("list", length = nsim)
+  AlphaDP      <- numeric(nsim)
+  LZ           <- numeric(nsim)
+  U_Slice      <- matrix(NA, n, nsim)
   #####################################################################################
   # inizialization
   pidir          <- c(MCMCpack::rdirichlet(1, aDir))
@@ -167,13 +168,13 @@ Brand_mlvt <- function(Y,
     cat("MCMC progress:\n")
     utils::flush.console()
     pbar <- utils::txtProgressBar(min = 1,
-                           max = NSIM * thinning + burn_in,
+                           max = nsim * thinning + burn_in,
                            style = 3)
     on.exit(close(pbar))
     ipbar <- 0
   }
   # #####################################################################################
-  for (sim in 1:(NSIM * thinning + burn_in)) {
+  for (sim in 1:(nsim * thinning + burn_in)) {
 
 
     Ui    <- stats::runif(n, 0, g2(ZETA,G = G,kappa = kappa))
@@ -276,6 +277,8 @@ Brand_mlvt <- function(Y,
       LZ[rr]             <- L.z
       PiDir[rr, ]        <- pidir
       Alpha_Beta[, , rr] <- alphabeta
+      AlphaDP[rr]         <- aDP
+      if(!light.output){
       Omega[[rr]]        <- omega
       MU_new[[rr]]       <- t(mu)
       SIGMA_new[[rr]]    <- Sigma
@@ -283,13 +286,13 @@ Brand_mlvt <- function(Y,
         MU_train[, , rr]     <- t(mu.train)
         SIGMA_train[, , , rr] <- Sigma.train
       }
-      AlphaDP[rr]         <- aDP
       U_Slice[, rr]       <- Ui
+      }
     }
     ################################################################
     ################################################################
     #   if (sim%%(verbose.step*thinning) == 0) {
-    #     cat(paste("Sampling iteration: ", sim, " out of ",NSIM*thinning + burn_in,"\n",round(aDP,3),"\n"))}
+    #     cat(paste("Sampling iteration: ", sim, " out of ",nsim*thinning + burn_in,"\n",round(aDP,3),"\n"))}
 
     if (verbose) {
       ipbar <- ipbar + 1
@@ -303,7 +306,6 @@ Brand_mlvt <- function(Y,
     SIGMA_train <- Sigma.train
   }
 
-  if (light) {
     out <-  list(
       P         = PiDir,
       AB        = Alpha_Beta,
@@ -315,28 +317,12 @@ Brand_mlvt <- function(Y,
       x_b       = xbar_j,
       s_b       = S2_j,
       alphaDP   = AlphaDP,
-      Uslice    = U_Slice,
-      LZ        = LZ
-    )
-
-  } else{
-    out <-  list(
-      P         = PiDir,
-      AB        = Alpha_Beta,
-      O         = Omega,
-      Mu        = MU_new,
-      Sigma     = SIGMA_new,
-      Mu.train  = MU_train,
-      Sig.train = SIGMA_train,
-      x_b       = xbar_j,
-      s_b       = S2_j,
-      alphaDP   = AlphaDP,
-      Uslice    = U_Slice,
+ #    Uslice    = U_Slice,
       prior     = prior,
       LZ        = LZ
 
     )
-  }
+
 
 
   return(out)
