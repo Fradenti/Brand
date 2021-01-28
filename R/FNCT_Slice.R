@@ -1,4 +1,11 @@
-
+#' Title
+#'
+#' @param sigma.est.train ddd
+#' @param vg dsaad
+#' @param t dsd
+#' @param G dfsd
+#'
+#' @return cascas
 #' @export
 a.AND.b_sigmaT_train <- function(sigma.est.train, # matrix TxG
                                  vg,t,G){
@@ -11,12 +18,12 @@ a.AND.b_sigmaT_train <- function(sigma.est.train, # matrix TxG
 
 #' Title
 #'
-#' @param single_func_set
-#' @param x
-#' @param basis_evaluated
-#' @param h_MCD
+#' @param single_func_set das
+#' @param x dsadsa
+#' @param basis_evaluated sdadas
+#' @param h_MCD asdsad
 #'
-#' @return
+#' @return dsada
 #' @export
 #'
 #' @examples
@@ -58,6 +65,7 @@ extract_robust_tr_v2 <-
 #' @param kappa xxx
 #' @param verbose xxx
 #' @param learning_type xxx
+#' @param light.output xxx
 #'
 #' @return model
 #' @export
@@ -65,7 +73,6 @@ extract_robust_tr_v2 <-
 Brand_fct <- function(Y,
                       prior,
                       L,
-                      # L numero possibili gruppi
                       nsim,
                       thinning,
                       burn_in,

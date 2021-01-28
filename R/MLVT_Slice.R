@@ -64,6 +64,7 @@ StartingEst <- function(X, categ, raw_MCD, h_MCD, G) {
 #' @param kappa xxx
 #' @param light xxx
 #' @param learning_type xxx
+#' @param light.output xxx
 #'
 #' @return model
 #' @export

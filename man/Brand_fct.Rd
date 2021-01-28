@@ -14,7 +14,8 @@ Brand_fct(
   fixed_alphaDP = F,
   kappa = 0.5,
   verbose = 1,
-  learning_type = c("transductive", "inductive")
+  learning_type = c("transductive", "inductive"),
+  light.output = F
 )
 }
 \arguments{
@@ -37,6 +38,8 @@ Brand_fct(
 \item{verbose}{xxx}
 
 \item{learning_type}{xxx}
+
+\item{light.output}{xxx}
 }
 \value{
 model

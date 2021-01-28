@@ -7,10 +7,16 @@
 extract_robust_tr_v2(single_func_set, x = x, basis_evaluated, h_MCD = 0.75)
 }
 \arguments{
-\item{h_MCD}{}
+\item{single_func_set}{das}
+
+\item{x}{dsadsa}
+
+\item{basis_evaluated}{sdadas}
+
+\item{h_MCD}{asdsad}
 }
 \value{
-
+dsada
 }
 \description{
 Title

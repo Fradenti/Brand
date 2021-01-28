@@ -12,14 +12,15 @@ Brand_mlvt(
   L,
   h_MCD = 0.75,
   raw_MCD = F,
-  NSIM,
+  nsim,
   thinning,
   burn_in,
   verbose = T,
   fixed_alphaDP = F,
   kappa = 0.75,
   light = F,
-  learning_type = c("transductive", "inductive")
+  learning_type = c("transductive", "inductive"),
+  light.output = F
 )
 }
 \arguments{
@@ -37,7 +38,7 @@ Brand_mlvt(
 
 \item{raw_MCD}{xxx}
 
-\item{NSIM}{xxx}
+\item{nsim}{xxx}
 
 \item{thinning}{xxx}
 
@@ -52,6 +53,8 @@ Brand_mlvt(
 \item{light}{xxx}
 
 \item{learning_type}{xxx}
+
+\item{light.output}{xxx}
 }
 \value{
 model
