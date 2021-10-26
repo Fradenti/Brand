@@ -6,7 +6,6 @@
 #' @param G dfsd
 #'
 #' @return cascas
-#' @export
 a.AND.b_sigmaT_train <- function(sigma.est.train, # matrix TxG
                                  vg,t,G){
   ab      <- array(NA,c(t,G,2))
@@ -24,7 +23,6 @@ a.AND.b_sigmaT_train <- function(sigma.est.train, # matrix TxG
 #' @param h_MCD asdsad
 #'
 #' @return dsada
-#' @export
 #'
 #' @examples
 extract_robust_tr_v2 <-

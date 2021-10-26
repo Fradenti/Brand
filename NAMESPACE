@@ -2,8 +2,6 @@
 
 export(Brand_fct)
 export(Brand_mlvt)
-export(a.AND.b_sigmaT_train)
-export(extract_robust_tr_v2)
 export(major.vote)
 importFrom(Rcpp,sourceCpp)
 useDynLib(brand, .registration = TRUE)
